@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* Chart tokens from the dataviz skill's validated reference palette
+   (light mode only - the rest of this app doesn't support a dark theme yet,
+   so a dark chart variant would be inconsistent with everything around it). */
+:root {
+  --chart-surface: #fcfcfb;
+  --chart-text-primary: #0b0b0b;
+  --chart-text-secondary: #52514e;
+  --chart-text-muted: #898781;
+  --chart-gridline: #e1e0d9;
+  --chart-baseline: #c3c2b7;
+  --chart-series-blue: #2a78d6;
+  --chart-status-good: #0ca30c;
+  --chart-status-warning: #fab219;
+  --chart-status-critical: #d03b3b;
+}
+
+@layer components {
+  .input {
+    @apply text-sm px-3 py-2 border border-slate-200 rounded-md bg-white text-slate-900
+           transition-shadow duration-150
+           focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400;
+  }
+  .btn-primary {
+    @apply text-sm px-4 py-2 rounded-md bg-blue-600 text-white font-medium shadow-sm shadow-blue-600/20
+           hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
+           transition-all duration-150;
+  }
+  .btn-secondary {
+    @apply text-sm px-4 py-2 rounded-md bg-white text-slate-700 border border-slate-200
+           hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
+           transition-all duration-150;
+  }
+  .card {
+    @apply bg-white border border-slate-200/80 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+  }
+  .table-row {
+    @apply border-t border-slate-100 transition-colors hover:bg-slate-50/70;
+  }
+}
+
+@layer utilities {
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+  .animate-toast-in {
+    animation: toast-in 0.18s ease-out;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+}

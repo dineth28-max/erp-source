@@ -1,0 +1,229 @@
+name: erp
+
+networks:
+  erp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  kafka_data:
+  redis_data:
+
+services:
+
+  # ---------------------------------------------------------------------
+  # Data & messaging infrastructure
+  # ---------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [erp-network]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [erp-network]
+
+  kafka:
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+    networks: [erp-network]
+
+  # ---------------------------------------------------------------------
+  # Platform
+  # ---------------------------------------------------------------------
+
+  api-gateway:
+    build: ./services/api-gateway
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
+      SALES_SERVICE_URL: http://sales-service:8083
+      MASTER_DATA_SERVICE_URL: http://master-data-service:8084
+      REPORTING_SERVICE_URL: http://reporting-service:8085
+      PROCUREMENT_SERVICE_URL: http://procurement-service:8086
+      FINANCE_SERVICE_URL: http://finance-service:8087
+      REDIS_HOST: redis
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:18090}
+    ports:
+      - "18080:8080"
+    depends_on:
+      redis: { condition: service_healthy }
+      identity-service: { condition: service_started }
+      inventory-service: { condition: service_started }
+      sales-service: { condition: service_started }
+      master-data-service: { condition: service_started }
+      reporting-service: { condition: service_started }
+      procurement-service: { condition: service_started }
+      finance-service: { condition: service_started }
+    networks: [erp-network]
+
+  # Runs in the browser, not in the compose network - API_BASE_URL must be
+  # the gateway's *host-published* port (18080), not the internal service
+  # name/port other containers use to reach it.
+  frontend:
+    build: ./frontend
+    environment:
+      API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://localhost:18080}
+    ports:
+      - "18090:80"
+    depends_on:
+      api-gateway: { condition: service_started }
+    networks: [erp-network]
+
+  # ---------------------------------------------------------------------
+  # Domain services
+  # ---------------------------------------------------------------------
+
+  identity-service:
+    build: ./services/identity-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: identity_db
+      DB_USER: identity_user
+      DB_PASSWORD: identity_pass
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+    ports:
+      - "18081:8081"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [erp-network]
+
+  inventory-service:
+    build: ./services/inventory-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: inventory_db
+      DB_USER: inventory_user
+      DB_PASSWORD: inventory_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_HOST: redis
+    ports:
+      - "18082:8082"
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [erp-network]
+
+  sales-service:
+    build: ./services/sales-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: sales_db
+      DB_USER: sales_user
+      DB_PASSWORD: sales_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
+      MASTER_DATA_SERVICE_URL: http://master-data-service:8084
+    ports:
+      - "18083:8083"
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      inventory-service: { condition: service_started }
+      master-data-service: { condition: service_started }
+    networks: [erp-network]
+
+  master-data-service:
+    build: ./services/master-data-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: master_data_db
+      DB_USER: master_data_user
+      DB_PASSWORD: master_data_pass
+    ports:
+      - "18084:8084"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [erp-network]
+
+  reporting-service:
+    build: ./services/reporting-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: reporting_db
+      DB_USER: reporting_user
+      DB_PASSWORD: reporting_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "18085:8085"
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    networks: [erp-network]
+
+  procurement-service:
+    build: ./services/procurement-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: procurement_db
+      DB_USER: procurement_user
+      DB_PASSWORD: procurement_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
+    ports:
+      - "18086:8086"
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      inventory-service: { condition: service_started }
+    networks: [erp-network]
+
+  finance-service:
+    build: ./services/finance-service
+    environment:
+      DB_HOST: postgres
+      DB_NAME: finance_db
+      DB_USER: finance_user
+      DB_PASSWORD: finance_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "18087:8087"
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    networks: [erp-network]
