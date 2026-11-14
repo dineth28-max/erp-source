@@ -5,7 +5,7 @@ const EVENT_STYLE = {
   StockReserved: "bg-emerald-50 text-emerald-700",
   StockReservationFailed: "bg-red-50 text-red-700",
   StockReleased: "bg-amber-50 text-amber-700",
-  StockConfirmed: "bg-blue-50 text-blue-700",
+  StockConfirmed: "bg-brand-50 text-brand-700",
 };
 
 function EventPill({ eventType }) {

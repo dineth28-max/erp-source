@@ -58,3 +58,50 @@ export const DollarIcon = (props) => (
 export const AlertIcon = (props) => (
   <svg {...base} {...props}><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.29 3.86l-8.18 14.18A1.5 1.5 0 0 0 3.4 20.5h17.2a1.5 1.5 0 0 0 1.3-2.46L13.71 3.86a1.5 1.5 0 0 0-2.6 0z" /></svg>
 );
+
+export const RefreshIcon = (props) => (
+  <svg {...base} {...props}><path d="M20 11a8 8 0 0 0-14.9-3.9L3 9" /><path d="M3 4v5h5" /><path d="M4 13a8 8 0 0 0 14.9 3.9L21 15" /><path d="M21 20v-5h-5" /></svg>
+);
+
+export const ArrowUpRightIcon = (props) => (
+  <svg {...base} {...props}><path d="M7 17L17 7" /><path d="M8 7h9v9" /></svg>
+);
+
+export const ArrowDownRightIcon = (props) => (
+  <svg {...base} {...props}><path d="M7 7l10 10" /><path d="M17 8v9H8" /></svg>
+);
+
+export const LogOutIcon = (props) => (
+  <svg {...base} {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+);
+
+export const EyeIcon = (props) => (
+  <svg {...base} {...props}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+
+export const EyeOffIcon = (props) => (
+  <svg {...base} {...props}><path d="M17.9 17.9A10 10 0 0 1 12 19c-6.5 0-10-7-10-7a18 18 0 0 1 4.1-5.1" /><path d="M9.9 4.2A9 9 0 0 1 12 4c6.5 0 10 7 10 7a18 18 0 0 1-2.2 3.2" /><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2" /><path d="M2 2l20 20" /></svg>
+);
+
+export const CheckCircleIcon = (props) => (
+  <svg {...base} {...props}><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.5 2.5L16 9.5" /></svg>
+);
+
+export const ClockIcon = (props) => (
+  <svg {...base} {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+);
+
+export const XCircleIcon = (props) => (
+  <svg {...base} {...props}><circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6" /><path d="M9 9l6 6" /></svg>
+);
+
+// Brand mark: three stacked ledger bars inside a rounded square - original
+// artwork for Practical ERP (stock, sales, finance on one base).
+export const LogoMark = ({ size = 32, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" className={className} aria-hidden="true">
+    <rect width="32" height="32" rx="8" fill="currentColor" />
+    <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="#fff" opacity="0.55" />
+    <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="#fff" opacity="0.8" />
+    <rect x="8" y="20.5" width="16" height="3.5" rx="1.75" fill="#fff" />
+  </svg>
+);

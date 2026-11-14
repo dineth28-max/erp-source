@@ -77,6 +77,7 @@ services:
 
   api-gateway:
     build: ./services/api-gateway
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       IDENTITY_SERVICE_URL: http://identity-service:8081
@@ -120,6 +121,7 @@ services:
 
   identity-service:
     build: ./services/identity-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: identity_db
@@ -134,6 +136,7 @@ services:
 
   inventory-service:
     build: ./services/inventory-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: inventory_db
@@ -151,6 +154,7 @@ services:
 
   sales-service:
     build: ./services/sales-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: sales_db
@@ -170,6 +174,7 @@ services:
 
   master-data-service:
     build: ./services/master-data-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: master_data_db
@@ -183,6 +188,7 @@ services:
 
   reporting-service:
     build: ./services/reporting-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: reporting_db
@@ -198,6 +204,7 @@ services:
 
   procurement-service:
     build: ./services/procurement-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: procurement_db
@@ -215,6 +222,7 @@ services:
 
   finance-service:
     build: ./services/finance-service
+    mem_limit: 1g  # same as Kubernetes: the JVM sizes its heap to 75% of this
     environment:
       DB_HOST: postgres
       DB_NAME: finance_db

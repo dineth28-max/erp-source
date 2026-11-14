@@ -1,6 +1,6 @@
 const STATUS_STYLE = {
   DRAFT: "bg-slate-100 text-slate-600",
-  SUBMITTED: "bg-blue-50 text-blue-700",
+  SUBMITTED: "bg-brand-50 text-brand-700",
   RECEIVED: "bg-emerald-50 text-emerald-700",
   CANCELLED: "bg-red-50 text-red-700",
 };

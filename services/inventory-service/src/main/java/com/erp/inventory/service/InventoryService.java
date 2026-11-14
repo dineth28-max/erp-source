@@ -8,6 +8,7 @@ import com.erp.inventory.repository.ItemRepository;
 import com.erp.inventory.repository.StockLevelRepository;
 import com.erp.inventory.web.dto.CreateItemRequest;
 import com.erp.inventory.web.dto.ReserveStockRequest;
+import com.erp.inventory.web.dto.StockSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -73,6 +75,17 @@ public class InventoryService {
         UUID tenantId = TenantContext.get().tenantId();
         return itemRepository.findByIdAndTenantId(itemId, tenantId)
                 .orElseThrow(() -> new InventoryException(HttpStatus.NOT_FOUND, "Item not found: " + itemId));
+    }
+
+    @Transactional(readOnly = true)
+    public StockSummaryResponse stockSummary(BigDecimal lowStockThreshold) {
+        UUID tenantId = TenantContext.get().tenantId();
+        Warehouse warehouse = stockMutator.defaultWarehouse(tenantId);
+        return new StockSummaryResponse(
+                itemRepository.countByTenantId(tenantId),
+                stockLevelRepository.countOutOfStock(tenantId, warehouse.getId()),
+                stockLevelRepository.countLowStock(tenantId, warehouse.getId(), lowStockThreshold),
+                lowStockThreshold);
     }
 
     @Transactional(readOnly = true)

@@ -4,8 +4,10 @@
 // Vite build-time env var for `npm run dev`, then a hardcoded fallback. It
 // defaults to 18080 because Windows/WSL2 had claimed 8080-8083 as a dynamic
 // port exclusion range on the dev machine this was built on.
+// `??` (not `||`) so an empty string is kept: "" = same origin, i.e. requests
+// go to /api/... on the host that served the page (used behind the AWS ALB).
 const BASE_URL =
-  window.__API_BASE_URL__ || import.meta.env.VITE_API_BASE_URL || "http://localhost:18080";
+  window.__API_BASE_URL__ ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:18080";
 
 export class ApiError extends Error {
   constructor(status, message) {
@@ -63,6 +65,10 @@ export const api = {
   listItems: () => request("/api/v1/items"),
   createItem: (item) => request("/api/v1/items", { method: "POST", body: item }),
   getStock: (itemId) => request(`/api/v1/stock/${itemId}`),
+  // One request, counted in the database - replaces fetching every item's
+  // stock record individually (an N+1 over HTTP) on the dashboard.
+  getStockSummary: (lowStockThreshold = 10) =>
+    request(`/api/v1/stock/summary?lowStockThreshold=${lowStockThreshold}`),
 
   // Pricing lives in master-data-service, not on the item itself - see
   // README "What's actually demonstrated here" for why (sales-service
@@ -71,10 +77,13 @@ export const api = {
   setPrice: (itemId, unitPrice) => request("/api/v1/prices", { method: "POST", body: { itemId, unitPrice } }),
 
   listOrders: () => request("/api/v1/orders?size=200"),
+  // Dashboard / top bar: only the newest few, plus totalElements for the count.
+  listRecentOrders: (size = 8) => request(`/api/v1/orders?size=${size}&sort=createdAt,desc`),
   getOrder: (orderId) => request(`/api/v1/orders/${orderId}`),
   createOrder: (order) => request("/api/v1/orders", { method: "POST", body: order }),
 
   listCustomers: () => request("/api/v1/customers?size=100"),
+  countCustomers: () => request("/api/v1/customers?size=1").then((p) => p?.totalElements ?? 0),
   createCustomer: (customer) => request("/api/v1/customers", { method: "POST", body: customer }),
 
   listVendors: () => request("/api/v1/vendors?size=100"),

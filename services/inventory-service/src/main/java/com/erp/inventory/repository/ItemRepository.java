@@ -12,4 +12,6 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
     Page<Item> findByTenantId(UUID tenantId, Pageable pageable);
     Optional<Item> findByIdAndTenantId(UUID id, UUID tenantId);
     boolean existsByTenantIdAndSku(UUID tenantId, String sku);
+
+    long countByTenantId(UUID tenantId);
 }

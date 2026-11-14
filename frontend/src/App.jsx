@@ -44,7 +44,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-canvas">
       <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       <Sidebar active={page} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -58,7 +58,7 @@ export default function App() {
         />
 
         <main key={page} className="flex-1 overflow-y-auto animate-fade-in">
-          {page === "dashboard" && <DashboardPage notify={notify} />}
+          {page === "dashboard" && <DashboardPage notify={notify} onNavigate={navigate} />}
           {page === "items" && (
             <ItemsPage notify={notify} searchTerm={searchTerm} onOrderPlaced={() => ordersRef.current?.reload()} />
           )}

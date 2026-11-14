@@ -1,43 +1,24 @@
-// Stat tile per the dataviz skill's figure contract: label (sentence case, no
-// trailing colon) + value (proportional figures, auto-compact) + optional
-// sub-caption. `accent` renders the hero treatment for the handful of metrics
-// that lead the dashboard; everything else stays a plain surface card.
+// Stat tile (dataviz figure contract): label (sentence case) + value
+// (proportional figures) + optional caption. Matches the dashboard KPI cards;
+// `accent` gives the one tile a page leads with a brand-tinted icon.
 export default function StatTile({ icon: Icon, label, value, caption, accent = false }) {
   return (
-    <div
-      className={
-        "rounded-xl p-4 flex flex-col gap-2 transition-transform duration-150 hover:-translate-y-0.5 " +
-        (accent
-          ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md shadow-blue-600/25"
-          : "card")
-      }
-    >
+    <div className="card flex flex-col gap-2 p-5">
       <div className="flex items-center justify-between">
-        <span
-          className={
-            "text-[11px] font-semibold uppercase tracking-wide " +
-            (accent ? "text-blue-100" : "text-slate-400")
-          }
-        >
-          {label}
-        </span>
+        <span className="card-title">{label}</span>
         {Icon && (
           <div
             className={
-              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 " +
-              (accent ? "bg-white/15" : "bg-slate-50")
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg " +
+              (accent ? "bg-brand-50 text-brand-600" : "bg-slate-50 text-slate-400")
             }
           >
-            <Icon className={accent ? "text-white" : "text-slate-400"} width={15} height={15} />
+            <Icon width={16} height={16} />
           </div>
         )}
       </div>
-      <div className="text-2xl font-semibold" style={{ fontVariantNumeric: "proportional-nums" }}>
-        {value}
-      </div>
-      {caption && (
-        <div className={"text-xs " + (accent ? "text-blue-100" : "text-slate-400")}>{caption}</div>
-      )}
+      <div className="text-[28px] font-semibold leading-tight tracking-tight text-ink-900">{value}</div>
+      {caption && <div className="text-xs text-slate-400">{caption}</div>}
     </div>
   );
 }
