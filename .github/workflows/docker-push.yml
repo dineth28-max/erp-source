@@ -50,6 +50,23 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Sonar's Java analyzer needs compiled classes (sonar.java.binaries)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: services/*/pom.xml
+
+      - name: Compile Java services
+        run: |
+          for pom in services/*/pom.xml; do
+            echo "::group::Compiling $(dirname "$pom")"
+            mvn -B -q -DskipTests -f "$pom" compile
+            echo "::endgroup::"
+          done
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -60,6 +77,8 @@ jobs:
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.projectName=${{ env.SONAR_PROJECT_NAME }}
             -Dsonar.sources=${{ env.SONAR_SOURCE_DIR }}
+            -Dsonar.java.binaries=services/*/target/classes
+            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**
             -Dsonar.qualitygate.wait=true
 
       - name: Fetch SonarQube quality results
@@ -90,6 +109,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   trivy-scan:
     name: Trivy Security Scan
+    needs: [sonarqube-analysis]
     runs-on: ubuntu-latest
     continue-on-error: true # a Trivy problem never fails the workflow
     permissions:
@@ -270,7 +290,7 @@ jobs:
   # or still running) never holds up the images or the deploy.
   docker:
     runs-on: ubuntu-latest
-    needs: [sonarqube-analysis]
+    needs: [sonarqube-analysis,trivy-scan]
     strategy:
       fail-fast: false
       matrix:
