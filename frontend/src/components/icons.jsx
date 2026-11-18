@@ -105,3 +105,7 @@ export const LogoMark = ({ size = 32, className = "" }) => (
     <rect x="8" y="20.5" width="16" height="3.5" rx="1.75" fill="#fff" />
   </svg>
 );
+
+export const ChevronRightIcon = (props) => (
+  <svg {...base} {...props}><path d="M9 6l6 6-6 6" /></svg>
+);

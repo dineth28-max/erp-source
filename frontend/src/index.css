@@ -1,37 +1,95 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Practical ERP design tokens
-   - Brand: indigo (app) + deep emerald (sign-in panel), charcoal ink.
-   - Chart tokens follow the dataviz reference palette (light mode).
+   Practical ERP - design tokens
+
+   Direction: a stock ledger. Pages are ledger paper (faint green-grey), sheets
+   are white, text is ledger ink (green-black), rules are hairlines. One accent:
+   ballpoint blue for actions, focus and the revenue series. Status colours come
+   only from the dataviz status palette and always ship with an icon + label.
+
+   Depth: borders only (hairline rgba rings), no card shadows. Shadows are kept
+   for things that float (menus, toasts, tooltips).
+   Spacing: 4px base. Radius: 6 controls / 10 sheets / 14 dialogs.
+   Type: IBM Plex Sans (self-hosted) at 1.25 scale from 14px.
+
+   The `slate` ramp is remapped to the ledger neutrals so every existing page
+   (Items, Orders, Procurement...) picks up the same greys without edits.
+   All text steps from 500 up pass WCAG AA (4.5:1) on white and on the page;
+   400 is for meta text (4.7:1 on white), 300 and lighter are non-text only.
    --------------------------------------------------------------------------- */
 @theme {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  --color-brand-50: #eef0fe;
-  --color-brand-100: #dfe2fd;
-  --color-brand-500: #5b5bf0;
-  --color-brand-600: #4c46e0;
-  --color-brand-700: #3d36c4;
+  /* ledger neutrals (replace Tailwind's cool slate) */
+  --color-slate-50: #f6f7f5;
+  --color-slate-100: #eceeeb;
+  --color-slate-200: #dde1dd;
+  --color-slate-300: #c4cac5;
+  --color-slate-400: #6c7570;
+  --color-slate-500: #565f5a;
+  --color-slate-600: #4a524e;
+  --color-slate-700: #383f3b;
+  --color-slate-800: #262c29;
+  --color-slate-900: #18201c;
+  --color-slate-950: #0f1412;
 
-  --color-ink-900: #12141c;
-  --color-ink-800: #1b1e29;
-  --color-ink-700: #272b38;
+  /* ballpoint blue - the one accent (dataviz sequential blue ramp) */
+  --color-brand-50: #eef4fc;
+  --color-brand-100: #dbe7f8;
+  --color-brand-500: #2a78d6;
+  --color-brand-600: #1c5cab; /* white text 6.6:1 */
+  --color-brand-700: #184f95;
 
-  /* white text on these passes WCAG AA (>= 4.5:1) */
+  /* ledger ink */
+  --color-ink-900: #18201c;
+  --color-ink-800: #262c29;
+  --color-ink-700: #383f3b;
+
+  /* sign-in panel (white text >= 4.5:1) */
   --color-emerald-brand: #06704f;
   --color-emerald-brand-dark: #055c41;
 
-  --color-canvas: #f4f5f9;
+  /* surfaces */
+  --color-canvas: #f3f4f1; /* the page - ledger paper */
+  --color-sheet: #ffffff; /* cards, tables, the sidebar */
+
+  /* status (dataviz status palette) + a text step and a wash for each */
+  --color-ok: #0ca30c;
+  --color-ok-ink: #006300;
+  --color-ok-wash: #e7f5e7;
+  --color-warn: #fab219;
+  --color-warn-ink: #7a5200;
+  --color-warn-wash: #fdf3dc;
+  --color-risk: #ec835a;
+  --color-risk-ink: #a3401a;
+  --color-risk-wash: #fcebe3;
+  --color-bad: #d03b3b;
+  --color-bad-ink: #b02a2a;
+  --color-bad-wash: #fbe9e9;
+
+  --radius-control: 6px;
+  --radius-sheet: 10px;
+  --radius-dialog: 14px;
+
+  --ease-out-snappy: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :root {
+  color-scheme: light;
+
+  /* hairline rules, tinted with ledger ink so they blend into the paper */
+  --rule: rgba(24, 32, 28, 0.1);
+  --rule-soft: rgba(24, 32, 28, 0.06);
+  --rule-strong: rgba(24, 32, 28, 0.18);
+
+  /* chart chrome (dataviz light mode, on the white sheet) */
   --chart-surface: #ffffff;
-  --chart-text-primary: #0b0b0b;
-  --chart-text-secondary: #52514e;
-  --chart-text-muted: #898781;
-  --chart-gridline: #e8e7e1;
-  --chart-baseline: #c3c2b7;
+  --chart-text-primary: #18201c;
+  --chart-text-secondary: #4a524e;
+  --chart-text-muted: #6c7570;
+  --chart-gridline: #e6e8e4;
+  --chart-baseline: #c4cac5;
   --chart-series-blue: #2a78d6;
   --chart-status-good: #0ca30c;
   --chart-status-warning: #fab219;
@@ -39,45 +97,79 @@
   --chart-status-critical: #d03b3b;
 }
 
+html {
+  /* the sticky top bar is 56px - keep focused / anchored elements out from under it */
+  scroll-padding-top: 72px;
+  touch-action: manipulation;
+}
+
 html,
 body {
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* one focus style for everything keyboard-reachable */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
 }
 
 @layer components {
   .input {
-    @apply text-sm px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900
-           transition-shadow duration-150 placeholder:text-slate-400
-           focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
+    @apply rounded-[var(--radius-control)] border border-[var(--rule-strong)] bg-slate-50 px-3 py-2 text-sm text-ink-900
+           transition-[border-color,box-shadow,background-color] duration-150
+           placeholder:text-slate-400
+           hover:border-slate-300
+           focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-brand-500/15;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg
-           bg-brand-600 text-white font-medium shadow-sm shadow-brand-600/25
-           hover:bg-brand-700 active:scale-[0.98]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-1
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
-           transition-all duration-150;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-4
+           text-sm font-medium text-white
+           transition-[background-color,transform] duration-150
+           hover:bg-brand-700 active:scale-[0.97]
+           disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 text-sm px-4 py-2 rounded-lg
-           bg-white text-slate-700 border border-slate-200
-           hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
-           transition-all duration-150;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--rule-strong)] bg-white px-4
+           text-sm font-medium text-slate-700
+           transition-[background-color,border-color,transform] duration-150
+           hover:border-slate-300 hover:bg-slate-50 active:scale-[0.97]
+           disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+  }
+  /* quiet text button, for "View all" style links inside sheets */
+  .btn-link {
+    @apply inline-flex items-center gap-1 rounded-[4px] text-[13px] font-medium text-brand-600
+           underline-offset-4 hover:text-brand-700 hover:underline;
   }
   .card {
-    @apply bg-white border border-slate-200/70 rounded-xl shadow-[0_1px_2px_rgba(18,20,28,0.04),0_1px_8px_rgba(18,20,28,0.03)];
+    @apply rounded-[var(--radius-sheet)] bg-sheet ring-1 ring-[var(--rule)];
   }
   .card-title {
-    @apply text-[12px] font-semibold uppercase tracking-[0.06em] text-brand-600;
+    @apply text-[15px] font-semibold tracking-[-0.005em] text-ink-900;
   }
   .table-row {
-    @apply border-t border-slate-100 transition-colors hover:bg-slate-50/70;
+    @apply border-t border-[var(--rule-soft)] transition-colors duration-100 hover:bg-slate-50;
   }
   .pill {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -85,34 +177,48 @@ body {
   @keyframes toast-in {
     from {
       opacity: 0;
-      transform: translate(-50%, -8px);
+      transform: translate(-50%, -6px) scale(0.98);
     }
     to {
       opacity: 1;
-      transform: translate(-50%, 0);
+      transform: translate(-50%, 0) scale(1);
     }
   }
   .animate-toast-in {
-    animation: toast-in 0.18s ease-out;
+    animation: toast-in 0.2s var(--ease-out-snappy);
   }
 
   @keyframes fade-in {
     from {
       opacity: 0;
-      transform: translateY(4px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
   .animate-fade-in {
-    animation: fade-in 0.2s ease-out;
+    animation: fade-in 0.16s var(--ease-out-snappy);
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .animate-pop-in {
+    animation: pop-in 0.16s var(--ease-out-snappy);
+    transform-origin: top right;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in,
-    .animate-toast-in {
+    .animate-toast-in,
+    .animate-pop-in {
       animation: none;
     }
   }

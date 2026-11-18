@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 // Single-series trend chart (dataviz spec): 2px line, ~10% area wash, hairline
 // gridlines on clean ticks, end dot with a 2px surface ring, a crosshair that
@@ -26,9 +26,11 @@ export default function AreaChart({
   const [active, setActive] = useState(null);
   const gradientId = useId();
 
-  useEffect(() => {
+  // measure before paint, then follow resizes
+  useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
+    setWidth(Math.max(280, el.clientWidth));
     const ro = new ResizeObserver(([entry]) => setWidth(Math.max(280, entry.contentRect.width)));
     ro.observe(el);
     return () => ro.disconnect();
@@ -85,10 +87,12 @@ export default function AreaChart({
   const tipLeft = hover ? Math.min(Math.max(hover.x, pad.left + 70), width - 70) : 0;
 
   return (
-    <div ref={wrapRef} className="relative w-full select-none">
+    <div ref={wrapRef} className="relative w-full min-w-0 select-none">
       <svg
-        width={width}
+        width="100%"
         height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
         role="img"
         aria-label={ariaLabel}
         tabIndex={0}
@@ -97,7 +101,7 @@ export default function AreaChart({
         onBlur={() => setActive(null)}
         onPointerMove={(e) => setActive(nearestIndex(e.clientX))}
         onPointerLeave={() => setActive(null)}
-        className="block outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 rounded-lg"
+        className="block rounded-[var(--radius-control)]"
       >
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
@@ -133,7 +137,11 @@ export default function AreaChart({
           );
         })}
 
-        {points.map((p, i) => (
+        {points.map((p, i) => {
+          // narrow plots label every other point, always keeping the latest
+          const every = innerW / points.length < 34 ? 2 : 1;
+          if ((points.length - 1 - i) % every !== 0) return null;
+          return (
           <text
             key={p.label}
             x={p.x}
@@ -144,7 +152,8 @@ export default function AreaChart({
           >
             {p.label}
           </text>
-        ))}
+          );
+        })}
 
         <path d={area} fill={`url(#${gradientId})`} />
         <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
@@ -160,14 +169,14 @@ export default function AreaChart({
 
       {hover && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg shadow-slate-900/10"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-control)] bg-sheet px-3 py-2 shadow-[0_0_0_1px_var(--rule),0_6px_16px_rgba(24,32,28,0.12)]"
           style={{ left: tipLeft, top: Math.max(0, hover.y - 64) }}
           role="status"
         >
-          <div className="text-[11px] text-slate-500">{hover.label}</div>
+          <div className="text-xs text-slate-500">{hover.tooltipLabel ?? hover.label}</div>
           <div className="mt-0.5 flex items-center gap-2">
             <span className="h-0.5 w-3 rounded-full" style={{ background: color }} aria-hidden="true" />
-            <span className="text-sm font-semibold text-slate-900">{formatValue(hover.value)}</span>
+            <span className="num text-sm font-semibold text-ink-900">{formatValue(hover.value)}</span>
             <span className="text-xs text-slate-500">{seriesName}</span>
           </div>
         </div>

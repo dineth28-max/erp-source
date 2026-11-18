@@ -45,6 +45,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex bg-canvas">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-[var(--radius-control)] focus:bg-sheet focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-600 focus:shadow-[0_0_0_1px_var(--rule),0_6px_16px_rgba(24,32,28,0.12)]"
+      >
+        Skip to content
+      </a>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       <Sidebar active={page} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -57,7 +63,7 @@ export default function App() {
           onMenuClick={() => setSidebarOpen(true)}
         />
 
-        <main key={page} className="flex-1 overflow-y-auto animate-fade-in">
+        <main id="main" tabIndex={-1} key={page} className="flex-1 overflow-y-auto animate-fade-in outline-none">
           {page === "dashboard" && <DashboardPage notify={notify} onNavigate={navigate} />}
           {page === "items" && (
             <ItemsPage notify={notify} searchTerm={searchTerm} onOrderPlaced={() => ordersRef.current?.reload()} />
