@@ -28,8 +28,249 @@ env:
   GITOPS_REPO: dineth28-max/micro-gitops
 
 jobs:
+  sonarqube-analysis:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      SONAR_PROJECT_KEY:  Erp
+      SONAR_PROJECT_NAME: ERP
+      SONAR_SOURCE_DIR:   frontend,services
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN:    ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=${{ env.SONAR_PROJECT_NAME }}
+            -Dsonar.sources=${{ env.SONAR_SOURCE_DIR }}
+            -Dsonar.qualitygate.wait=true
+
+      - name: Fetch SonarQube quality results
+        if: always()
+        env:
+          SONAR_HOST_URL:     ${{ secrets.SONAR_HOST }}
+          SONAR_TOKEN:        ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY:  ${{ env.SONAR_PROJECT_KEY }}
+          SONAR_PROJECT_NAME: ${{ env.SONAR_PROJECT_NAME }}
+          SONAR_RESULTS_JSON: sonar-results/sonar_results.json
+        run: |
+          python CI-Script/fetch_sonar_results.py
+
+      - name: Upload SonarQube results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-results
+          path: sonar-results/sonar_results.json
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2  Trivy source-code scan - the code only, no Docker image is built.
+  #        `trivy fs` reads the dependency manifests straight from the repo
+  #        (services/*/pom.xml, frontend/package-lock.json) plus secrets in the
+  #        source. Report only: it never blocks the build or the deploy -
+  #        runs in parallel with everything else and its job is allowed to fail.
+  # ─────────────────────────────────────────────────────────────────────────────
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true # a Trivy problem never fails the workflow
+    permissions:
+      contents: read
+
+    env:
+      TRIVY_RESULTS_FS:   trivy-results/fs_results.json
+      TRIVY_RESULTS_JSON: trivy-results/trivy_results.json
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y trivy
+
+      - name: Create results directory
+        run: mkdir -p trivy-results
+
+      # Exit code 0: findings go into the report, they don't fail the step
+      - name: Trivy filesystem scan (source code + dependency manifests)
+        run: |
+          trivy fs . \
+            --scanners vuln,secret \
+            --skip-dirs node_modules \
+            --format json \
+            --output "${{ env.TRIVY_RESULTS_FS }}" \
+            --exit-code 0 \
+            --no-progress
+        continue-on-error: true
+
+      - name: Process Trivy results
+        continue-on-error: true
+        env:
+          TRIVY_RESULTS_FS:   ${{ env.TRIVY_RESULTS_FS }}
+          TRIVY_RESULTS_JSON: ${{ env.TRIVY_RESULTS_JSON }}
+        run: |
+          python CI-Script/fetch_trivy_results.py
+
+      - name: Push Trivy results to GitHub artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results/trivy_results.json
+          if-no-files-found: warn
+
+  generate-report:
+    name: Generate Combined Report
+    needs: [sonarqube-analysis, trivy-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download SonarQube results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sonar-results
+          path: sonar-results
+        continue-on-error: true
+
+      - name: Download Trivy results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results
+        continue-on-error: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install WeasyPrint system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            libpangocairo-1.0-0 \
+            libcairo2 \
+            libgdk-pixbuf2.0-0 \
+            shared-mime-info
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "weasyprint>=62.0"
+
+      - name: Generate combined HTML and PDF reports
+        run: |
+          python CI-Script/generate_combined_report.py \
+            --sonar-input  sonar-results/sonar_results.json \
+            --trivy-input  trivy-results/trivy_results.json \
+            --output-html  reports/combined_report.html \
+            --output-pdf   reports/combined_report.pdf
+
+      - name: Upload combined report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-report
+          path: |
+            reports/combined_report.html
+            reports/combined_report.pdf
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 4  Download the combined-report artifact and send it via email.
+  # ─────────────────────────────────────────────────────────────────────────────
+  send-email:
+    name: Send Email Report
+    needs: [sonarqube-analysis, trivy-scan, generate-report]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download combined report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: combined-report
+          path: reports
+        continue-on-error: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python packages
+        run: python -m pip install --upgrade pip
+
+      - name: Send report email
+        env:
+          SMTP_HOST:     smtp.gmail.com
+          SMTP_PORT:     587
+          SMTP_USER:     sandakelumdineth120@gmail.com
+          SMTP_PASSWORD: ${{ secrets.PASSWORD }}
+          MAIL_FROM:     sandakelumdineth120@gmail.com
+          MAIL_TO:       "herathdineth729@gmail.com"
+          MAIL_SUBJECT:  "[${{ (needs.sonarqube-analysis.result == 'success' && needs.trivy-scan.result == 'success' && needs.generate-report.result == 'success') && 'CI PASS' || 'CI FAIL' }}] CI Quality & Security Report - ${{ github.repository }} #${{ github.run_number }}"
+          REPORT_PDF:    reports/combined_report.pdf
+          REPORT_HTML:   reports/combined_report.html
+          CI_STATUS:     ${{ (needs.sonarqube-analysis.result == 'success' && needs.trivy-scan.result == 'success' && needs.generate-report.result == 'success') && 'PASS' || 'FAIL' }}
+          SONAR_JOB_RESULT:   ${{ needs.sonarqube-analysis.result }}
+          TRIVY_JOB_RESULT:   ${{ needs.trivy-scan.result }}
+          REPORT_JOB_RESULT:  ${{ needs.generate-report.result }}
+        run: |
+          python CI-Script/send_report_email.py
+
+
+
+
+
+  # Waits for SonarQube only. Trivy is report-only, so its result (pass, fail
+  # or still running) never holds up the images or the deploy.
   docker:
     runs-on: ubuntu-latest
+    needs: [sonarqube-analysis]
     strategy:
       fail-fast: false
       matrix:
